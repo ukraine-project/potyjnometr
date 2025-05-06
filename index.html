@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Потужнометр</title>
+  <link rel="icon" type="image/x-icon" href="image/ico.ico">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1a1a1a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #111;
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      width: 300px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+
+    .flag {
+      width: 24px;
+      height: 16px;
+      background: linear-gradient(to bottom, #0057b7 50%, #ffd700 50%);
+      border: 1px solid #444;
+    }
+
+    .subtitle {
+      font-size: 0.8em;
+      color: #888;
+      margin-bottom: 20px;
+    }
+
+    .bar-wrapper {
+      background-color: #333;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      justify-content: space-between;
+      margin-bottom: 25px;
+    }
+
+    .emoji {
+      font-size: 1.2em;
+    }
+
+    .bar {
+      display: flex;
+      flex: 1;
+      height: 15px;
+      margin: 0 10px;
+      gap: 2px;
+    }
+
+    .bar-segment {
+      flex: 1;
+      border-radius: 2px;
+      background-color: #444;
+      transition: background-color 0.3s;
+    }
+
+    .value-display {
+      font-size: 3em;
+      font-weight: bold;
+    }
+
+    .unit {
+      font-size: 1.2em;
+      color: #bbb;
+      margin-bottom: 10px;
+    }
+
+    .multiplier {
+      font-size: 0.9em;
+      color: #fff;
+      background: #444;
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .button {
+      padding: 12px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 12px;
+      background-color: #000;
+      color: white;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .button:hover {
+      background-color: #333;
+    }
+
+    .footer {
+      margin-top: 15px;
+      font-size: 0.75em;
+      color: #666;
+    }
+
+    #manual-slider {
+      display: none;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .button-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .value-container {
+      display: inline-block;
+      background-color: #000;
+      padding: 7px 1px;
+      border-radius: 12px;
+      margin-top: 15px;
+      width: 150px;
+    }
+
+    .unit {
+      font-size: 1.2em;
+      color: #bbb;
+      margin-top: 5px;
+    }
+
+    .button-active {
+      background-color: #333;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="flag"></div>
+      <h2>ПОТУЖНОМЕТР</h2>
+    </div>
+    <div class="subtitle">ПМ-2025</div>
+    <div class="bar-wrapper">
+      <div class="emoji" id="sticker">🥱</div>
+      <div class="bar" id="bar"></div>
+      <div class="emoji">💀</div>
+    </div>
+    <div class="value-container">
+      <div class="value-display" id="power-value">0</div>
+      <div class="unit">ПТЖ</div>
+    </div>
+
+    <div class="button-wrapper">
+      <button class="button" id="measure-btn">Виміряти потужність</button>
+      <button class="button" id="toggle-btn">КНОПКА</button>
+      <input type="range" id="manual-slider" min="0" max="100" value="0" />
+    </div>
+
+    <div class="footer" id="footer-sound">MADE BY ROMA</div>
+  </div>
+
+  <audio id="power-sound" src="music/music.mp3"></audio>
+  <audio id="footer-audio" src="music/1.mp3"></audio>
+
+  <script>
+const footer = document.getElementById('footer-sound');
+const footerAudio = document.getElementById('footer-audio');
+
+footer.addEventListener('click', () => {
+  footerAudio.currentTime = 0;
+  footerAudio.play();
+});
+
+  const measureButton = document.getElementById('measure-btn');
+  const toggleButton = document.getElementById('toggle-btn');
+  const manualSlider = document.getElementById('manual-slider');
+  const valueDisplay = document.getElementById('power-value');
+  const bar = document.getElementById('bar');
+  const powerSound = document.getElementById('power-sound');
+  const sticker = document.getElementById('sticker');
+
+  const totalSegments = 20;
+  const segments = [];
+  for (let i = 0; i < totalSegments; i++) {
+    const segment = document.createElement('div');
+    segment.classList.add('bar-segment');
+    bar.appendChild(segment);
+    segments.push(segment);
+  }
+
+  function getColor(index) {
+    if (index < 6) return '#22c55e';
+    if (index < 12) return '#facc15';
+    if (index < 16) return '#f97316';
+    return '#ef4444';
+  }
+
+  function updateBar(value) {
+    const activeCount = Math.round((value / 100) * totalSegments);
+    segments.forEach((segment, index) => {
+      if (index < activeCount) {
+        segment.style.backgroundColor = getColor(index);
+      } else {
+        segment.style.backgroundColor = '#444';
+      }
+    });
+  }
+
+  function updateSticker(value) {
+    if (value >= 0 && value <= 20) {
+      sticker.textContent = '🥱';
+    } else if (value >= 21 && value <= 40) {
+      sticker.textContent = '😐';
+    } else if (value >= 41 && value <= 60) {
+      sticker.textContent = '😨';
+    } else if (value >= 61 && value <= 80) {
+      sticker.textContent = '😱';
+    } else if (value >= 81 && value <= 100) {
+      sticker.textContent = '🤯';
+    }
+  }
+
+  updateSticker(0);
+
+  function handleValueChange(value) {
+    valueDisplay.textContent = value;
+    updateBar(value);
+    updateSticker(value);
+    if (value >= 80) {
+      powerSound.currentTime = 0;
+      powerSound.play();
+    } else {
+      powerSound.pause();
+      powerSound.currentTime = 0;
+    }
+  }
+
+  measureButton.addEventListener('click', () => {
+    measureButton.textContent = 'Виміряю...';
+    setTimeout(() => {
+      const randomValue = Math.floor(Math.random() * 101);
+      handleValueChange(randomValue);
+      measureButton.textContent = 'Виміряти потужність';
+    }, 2000);
+  });
+
+  toggleButton.addEventListener('click', () => {
+    if (toggleButton.textContent === 'КНОПКА') {
+      toggleButton.textContent = 'РУЧНИЙ';
+      toggleButton.classList.add('button-active');
+      toggleButton.classList.remove('button-inactive');
+      measureButton.style.display = 'none';
+      manualSlider.style.display = 'block';
+    } else {
+      toggleButton.textContent = 'КНОПКА';
+      toggleButton.classList.remove('button-active');
+      toggleButton.classList.add('button-inactive');
+      measureButton.style.display = 'block';
+      manualSlider.style.display = 'none';
+    }
+  });
+
+  manualSlider.addEventListener('input', () => {
+    handleValueChange(Number(manualSlider.value));
+  });
+</script>
+</body>
+</html>
